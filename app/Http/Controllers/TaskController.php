@@ -9,20 +9,25 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Exception;
+use Illuminate\Http\Exceptions\HttpResponseException;
 
 class TaskController extends Controller
 {
     public function validId(int $id)
     {
         if (!$id || $id <= 0) {
-            abort(400, 'Id is required and must be positive');
+            throw new HttpResponseException(response()->json([
+                'message' => 'Id is required'
+            ], 400));
         }
     }
 
     public function isTaskNull($task)
     {
         if ($task === null) {
-            abort(404, 'Task not found');
+            throw new HttpResponseException(response()->json([
+                'message' => 'Task not found'
+            ], 404));
         }
     }
 
@@ -31,17 +36,15 @@ class TaskController extends Controller
         try 
         {
             $tasks = TaskModel::all();
-            return response()->json([
-                'success' => true,
-                'data' => $tasks
-            ], 200);
+            return response()->json(
+                $tasks
+            , 200);
         } 
         catch (\Throwable $th) 
         {
-            return response()->json([
-                'success' => false,
-                'error' => $th->getMessage()
-            ], 500);
+            throw new HttpResponseException(response()->json(
+                $th
+            , 500));
         }
     }
 
@@ -60,19 +63,14 @@ class TaskController extends Controller
             $task = TaskModel::create($data);
 
             DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Task created successfully',
-                'data' => $task
-            ], 201);
+            return response()->json('Task created successfully', 201);
         } 
         catch (\Throwable $th) 
         {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'error' => $th->getMessage()
-            ], 500);
+            throw new HttpResponseException(response()->json(
+                $th
+            , 500));
         }
     }
 
@@ -83,10 +81,9 @@ class TaskController extends Controller
         $task = TaskModel::find($id);
         $this->isTaskNull($task);
 
-        return response()->json([
-            'success' => true,
-            'data' => $task
-        ], 200);
+        return response()->json(
+            $task
+        , 200);
     }
 
     public function edit(int $id)
@@ -108,58 +105,44 @@ class TaskController extends Controller
             $task->update($request->validated());
 
             DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Task updated successfully',
-                'data' => $task
-            ], 200);
+            return response()->json('Task updated successfully', 200);
         } 
         catch (\Throwable $th) 
         {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'error' => $th->getMessage()
-            ], 500);
+            throw new HttpResponseException(response()->json(
+                $th
+            , 500));
         }
     }
 
-    public function destroy(int $id)
+    public function destroy(string $id)
     {
         try 
         {
+            $id = (int) $id;
             DB::beginTransaction();
 
             $this->validId($id);
 
-            $task = TaskModel::findOrFail($id);
+            $task = TaskModel::find($id);
             $this->isTaskNull($task);
 
             $task->forceDelete();
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Task deleted successfully'
-            ], 200);
+            return response()->json('Task deleted successfully', 200);
         } 
         catch (ModelNotFoundException $e) 
         {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'error' => 'Task not found'
-            ], 404);
+            throw new HttpResponseException(response()->json($e, 500));
         } 
         catch (Exception $e) 
         {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'error' => 'An error occurred while deleting the task',
-                'details' => $e->getMessage()
-            ], 500);
+            throw new HttpResponseException(response()->json($e, 500));
         }
     }
 }

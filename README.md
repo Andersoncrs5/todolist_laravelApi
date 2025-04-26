@@ -6,7 +6,9 @@ finished date: 4/21
 ## features 
 
 postgresql
+
 laravel 12
+
 php 8.4.8
 
 ## WARNING 

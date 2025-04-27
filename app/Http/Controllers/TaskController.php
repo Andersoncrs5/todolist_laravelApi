@@ -22,12 +22,47 @@ class TaskController extends Controller
         }
     }
 
+    public function changeStatus(string $id) 
+    {
+        try 
+        {
+            $id = (int) $id;
+            DB::beginTransaction();
+
+            $this->validId($id);
+
+            $task = TaskModel::find($id);
+            $this->isTaskNull($task);
+
+            $task->done = !$task->done;
+            $task->save();
+
+            DB::commit();
+            return response()->json('Task updated successfully', 200);
+        } 
+        catch (\Throwable $th) 
+        {
+            DB::rollBack();
+            throw new HttpResponseException(response()->json(
+                $th
+            , 500));
+        }
+
+    }
+
+    public function findByTitle(string $title)
+    {
+        $tasks = TaskModel::where('title', 'like', "%$title%")->get();
+
+        return response()->json(
+            $tasks, 200
+        );
+    }
+
     public function isTaskNull($task)
     {
         if ($task === null) {
-            throw new HttpResponseException(response()->json([
-                'message' => 'Task not found'
-            ], 404));
+            throw new HttpResponseException(response()->json('Task not found', 404));
         }
     }
 
@@ -74,8 +109,9 @@ class TaskController extends Controller
         }
     }
 
-    public function show(int $id)
+    public function show(string $id)
     {
+        $id = (int) $id;
         $this->validId($id);
 
         $task = TaskModel::find($id);
@@ -91,10 +127,11 @@ class TaskController extends Controller
         $this->validId($id);
     }
 
-    public function update(UpdateTaskRequest $request, int $id)
+    public function update(UpdateTaskRequest $request, string $id)
     {
         try 
         {
+            $id = (int) $id;
             DB::beginTransaction();
 
             $this->validId($id);
